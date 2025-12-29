@@ -1,14 +1,11 @@
-# Yape Code Challenge :rocket:
+# Transaction Service – Yape Code Challenge
 
-Our code challenge will let you marvel us with your Jedi coding skills :smile:. 
+Este proyecto implementa un **microservicio de transacciones** desarrollado con **Spring Boot 3**, siguiendo el enfoque de **Arquitectura Hexagonal (Ports & Adapters)** y un **flujo event-driven con Kafka**.
 
-Don't forget that the proper way to submit your work is to fork the repo and create a PR :wink: ... have fun !!
 
-- [Yape Code Challenge :rocket:](#yape-code-challenge-rocket)
-- [Problem](#problem)
-- [Tech Stack](#tech-stack)
-  - [Optional](#optional)
-- [Send us your challenge](#send-us-your-challenge)
+Todos los endpoints intercambian datos en **JSON** y el sistema está preparado para ejecutarse **localmente con Docker Compose**.
+
+---
 
 # Problem
 
@@ -31,54 +28,180 @@ Every transaction with a value greater than 1000 should be rejected.
     Anti-Fraud -- Send transaction Status Rejected event--> Transaction
     Transaction -- Update transaction Status event--> transactionDatabase[(Database)]
 ```
+---
 
-# Tech Stack
+## Arquitectura
 
-<ol>
-  <li>Java. You can use any framework you want</li>
-  <li>Any database</li>
-  <li>Kafka</li>
-</ol>
+El proyecto sigue **Arquitectura Hexagonal**, separando claramente responsabilidades:
 
-We do provide a `Dockerfile` to help you get started with a dev environment.
-
-You must have two resources:
-
-1. Resource to create a transaction that must containt:
-
-```json
-{
-  "accountExternalIdDebit": "Guid",
-  "accountExternalIdCredit": "Guid",
-  "tranferTypeId": 1,
-  "value": 120
-}
+```
+├── application
+│   ├── dto
+│   ├── service
+│   └── usecase
+├── domain
+│   ├── model
+│   └── port
+├── infrastructure
+│   ├── inbound
+│   │   ├── rest
+│   │   └── kafka
+│   ├── outbound
+│   │   ├── persistence
+│   │   └── kafka
+│   └── config
 ```
 
-2. Resource to retrieve a transaction
+---
 
+## Ejecución local (sin Docker)
+
+### Requisitos
+- Java 17
+- Maven 3.9+
+- PostgreSQL
+- Kafka + Zookeeper
+
+### Compilar y ejecutar tests
+```bash
+mvn clean compile
+mvn test
+mvn verify
+```
+
+Reporte JaCoCo:
+```
+target/site/jacoco/index.html
+```
+##  Docker Compose (PostgreSQL + Kafka + Transaction Service + Antifraud)
+
+### Requisitos
+- Docker y Docker Compose
+
+### 1) Construir el `.jar`
+Desde la raíz del proyecto (donde está el `pom.xml`):
+
+```bash
+mvn clean package
+```
+
+El ejecutable jar se genera en:
+
+```
+target/transaction-service-0.0.1.jar
+```
+
+> empaquetar mas pruebas unitarias & cobertura:
+> ```bash
+> mvn clean verify
+> ```
+
+### Levantar el ecosistema con Docker Compose
+
+Ubícate en la carpeta `devops` (donde está el `docker-compose.yml`) y ejecuta:
+
+```bash
+  cd devops
+  docker compose up --build
+```
+
+Para ejecutar en segundo plano:
+
+```bash
+  docker compose up -d --build
+```
+Ver contenedores activos:
+
+```bash
+  docker ps
+```
+Para ver logs:
+
+```bash
+  docker compose logs -f
+```
+
+Para detener y eliminar contenedores:
+
+```bash
+  docker compose down
+```
+
+Para eliminar también el volumen de Postgres:
+
+```bash
+  docker compose down -v
+```
+
+---
+
+## Probar endpoints REST
+
+### Crear transacción
+```bash
+curl --location --request POST 'http://localhost:8080/transactions' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "accountExternalIdDebit": "11111111-1111-1111-1111-111111111111",
+  "accountExternalIdCredit": "22222222-2222-2222-2222-222222222222",
+  "tranferTypeId": 1,
+  "value": 150.75
+}'
+```
+
+Response:
 ```json
 {
-  "transactionExternalId": "Guid",
+  "transactionExternalId": "83a3d905-ee35-4201-9958-0fde4d7267b8"
+}
+```
+---
+
+
+
+### Obtener transacción por ID
+```bash
+curl --location --request GET \
+'http://localhost:8080/transactions/{transactionExternalId}'
+```
+
+Response:
+```json
+{
+  "transactionExternalId": "83a3d905-ee35-4201-9958-0fde4d7267b8",
   "transactionType": {
-    "name": ""
+    "name": "TRANSFER"
   },
   "transactionStatus": {
-    "name": ""
+    "name": "APPROVED"
   },
-  "value": 120,
-  "createdAt": "Date"
+  "value": 150.75,
+  "createdAt": "2025-12-29T00:00:00Z"
 }
 ```
 
-## Optional
+---
 
-You can use any approach to store transaction data but you should consider that we may deal with high volume scenarios where we have a huge amount of writes and reads for the same data at the same time. How would you tackle this requirement?
+## Docker Compose
 
-You can use Graphql;
+Levantar todo el entorno:
+```bash
+docker-compose up --build
+```
 
-# Send us your challenge
+Servicios:
+- Transaction Service → 8080
+- Antifraud Service → 8081
+- PostgreSQL → 5432
+- Kafka → 9092
 
-When you finish your challenge, after forking a repository, you **must** open a pull request to our repository. There are no limitations to the implementation, you can follow the programming paradigm, modularization, and style that you feel is the most appropriate solution.
+---
 
-If you have any questions, please let us know.
+##  Stack Tecnológico
+
+- Java 17
+- Spring Boot 3.5
+- PostgreSQL
+- Kafka
+- Docker
+- JUnit 5 + Mockito + AssertJ + JaCoCo
