@@ -1,0 +1,111 @@
+# ============================================
+# Spring Boot (Java + Maven)
+# ============================================
+
+# Compiled class files
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+spring.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*.old
+*.orig
+
+# ============================================
+# Maven
+# ============================================
+target/
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+.settings/
+dependency-reduced-pom.xml
+release.properties
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+pom.xml.backup
+buildNumber.properties
+
+# ============================================
+# IntelliJ IDEA
+# ============================================
+.idea/
+*.iml
+*.iws
+out/
+.idea_modules/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/httpRequests
+.idea/caches/
+.idea/libraries/
+
+# ============================================
+# VS Code (opcional si usas ambos IDEs)
+# ============================================
+.vscode/
+.history/
+
+# ============================================
+# Environment / Configuration
+# ============================================
+.env
+*.env.local
+*.key
+*.pem
+*.crt
+*.jks
+*.p12
+*.der
+
+# Spring configuration files (keep templates only)
+application-*.yml
+application-*.yaml
+application-*.properties
+!application-example.yml
+!application-example.yaml
+!application-example.properties
+
+# ============================================
+# Test / Coverage
+# ============================================
+test-output/
+surefire-reports/
+jacoco.exec
+reports/
+coverage/
+
+# ============================================
+# OS files
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================
+# Misc
+# ============================================
+bin/
+tmp/
+.cache/
