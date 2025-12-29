@@ -96,7 +96,18 @@ target/transaction-service-0.0.1.jar
 > mvn clean verify
 > ```
 
-### Levantar el ecosistema con Docker Compose
+## ***Antifraud Service***
+
+El servicio de **Antifraud** se encuentra implementado en un repositorio independiente y se integra con este microservicio mediante eventos Kafka.
+
+Repositorio:
+ https://github.com/alessandrojre/antifraud-service
+
+En el entorno local, el `docker-compose` levanta automáticamente este servicio para simular el flujo completo:
+Transaction Service → Kafka → Antifraud Service → Kafka → Transaction Service.
+
+
+## Levantar el ecosistema con Docker Compose
 
 Ubícate en la carpeta `devops` (donde está el `docker-compose.yml`) y ejecuta:
 
