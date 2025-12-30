@@ -6,6 +6,7 @@ import com.yape.transaction.application.usecase.CreateTransactionUseCase;
 import com.yape.transaction.application.usecase.GetTransactionUseCase;
 import com.yape.transaction.application.usecase.UpdateTransactionStatusUseCase;
 import com.yape.transaction.domain.model.Transaction;
+import com.yape.transaction.domain.model.TransactionStatus;
 import com.yape.transaction.domain.model.TransactionType;
 import com.yape.transaction.domain.port.TransactionEventPublisherPort;
 import com.yape.transaction.domain.port.TransactionRepositoryPort;
@@ -29,43 +30,43 @@ public class TransactionService implements UpdateTransactionStatusUseCase,
 
         TransactionType type = mapType(command.tranferTypeId());
 
-        Transaction tx = Transaction.createPending(
+        Transaction transaction = Transaction.createPending(
                 command.accountExternalIdDebit(),
                 command.accountExternalIdCredit(),
                 type,
                 command.value()
         );
 
-        repository.save(tx);
-        publisher.publishTransactionCreated(tx);
+        repository.save(transaction);
+        publisher.publishTransactionCreated(transaction);
 
-        return tx.getId();
+        return transaction.getId();
     }
 
     @Override
     public TransactionView getById(UUID transactionExternalId) {
-        Transaction tx = repository.findById(transactionExternalId)
+        Transaction transaction = repository.findById(transactionExternalId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionExternalId));
 
         return new TransactionView(
-                tx.getId(),
-                tx.getType().name(),
-                tx.getStatus().name(),
-                tx.getValue(),
-                tx.getCreatedAt()
+                transaction.getId(),
+                transaction.getType().name(),
+                transaction.getStatus().name(),
+                transaction.getValue(),
+                transaction.getCreatedAt()
         );
     }
 
     @Override
     public void updateStatus(UUID transactionExternalId, String newStatus) {
 
-        var tx = repository.findById(transactionExternalId)
+        var transaction = repository.findById(transactionExternalId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionExternalId));
 
-        var status = com.yape.transaction.domain.model.TransactionStatus.valueOf(newStatus.toUpperCase());
+        var status = TransactionStatus.valueOf(newStatus.toUpperCase());
 
-        tx.updateStatus(status);
-        repository.save(tx);
+        transaction.updateStatus(status);
+        repository.save(transaction);
     }
 
     private TransactionType mapType(Integer tranferTypeId) {
