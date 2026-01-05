@@ -1,0 +1,48 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:transactionsdb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    pool:
+      initial-size: 10
+      max-size: 50
+      max-idle-time: 30m
+      validation-query: SELECT 1
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:transactionsdb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    producer:
+      acks: all
+      retries: 3
+      enable.idempotence: true
+    consumer:
+      group-id: ${TX_GROUP_ID:transaction-service}
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      isolation-level: read_committed
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+yape:
+  kafka:
+    topics:
+      transaction-created: ${TX_CREATED_TOPIC:transaction.created}
+      transaction-status-updated: ${TX_STATUS_UPDATED_TOPIC:transaction.status.updated}
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics

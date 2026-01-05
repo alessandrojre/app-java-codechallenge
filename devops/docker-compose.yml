@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: transactionsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.5.3
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-enterprise-kafka:5.5.3
+    container_name: kafka
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9991
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "kafka-topics --bootstrap-server kafka:29092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Crea tópicos necesarios para el flujo
+  kafka-init:
+    image: confluentinc/cp-enterprise-kafka:5.5.3
+    container_name: kafka-init
+    depends_on: [kafka]
+    command: >
+      bash -c "
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic transaction.created --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic transaction.status.updated --partitions 3 --replication-factor 1
+      "
+    restart: "no"
+
+  transaction-service:
+    build:
+      context: ..
+      dockerfile: devops/Dockerfile
+    image: transaction-service:local
+    container_name: transaction-service
+    depends_on:
+      - postgres
+      - kafka
+      - kafka-init
+    restart: on-failure
+    environment:
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/transactionsdb
+      SPRING_R2DBC_POOL_MAX_SIZE: 50
+      # URL para JDBC (Flyway)
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transactionsdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      TX_CREATED_TOPIC: "transaction.created"
+      TX_STATUS_UPDATED_TOPIC: "transaction.status.updated"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: transaction-service-group
+    ports:
+      - "8080:8080"
+
+  antifraud-service:
+    build:
+      context: ./antifraud
+      dockerfile: Dockerfile
+    image: antifraud-service:local
+    container_name: antifraud-service
+    depends_on:
+      - kafka
+      - kafka-init
+    environment:
+  #ANTIFRAUD_LIMIT configurable#
+      ANTIFRAUD_LIMIT: 1000
+      TOPIC_CREATED: "transaction.created"
+      TOPIC_UPDATED: "transaction.status.updated"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+    ports:
+      - "8081:8081"
+volumes:
+  pgdata:
